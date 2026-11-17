@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeControlHub</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f7fb;
+    color: #243047;
+}
+
+header {
+    background: #ffffff;
+    padding: 25px 8%;
+    border-bottom: 1px solid #e5eaf1;
+}
+
+header h1 {
+    margin: 0;
+    color: #3659a2;
+}
+
+header p {
+    color: #718096;
+}
+
+main {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stat {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px #00000008;
+}
+
+.stat h2 {
+    font-size: 35px;
+    margin-bottom: 0;
+}
+
+.devices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.device {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px #00000008;
+}
+
+.device h3 {
+    margin-top: 0;
+}
+
+.online { color: #16a34a; }
+.offline { color: #dc2626; }
+
+button {
+    background: #3659a2;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #284580;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 650px) {
+    .summary {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🏠 HomeControlHub</h1>
+    <p>Smart home monitoring and device management</p>
+</header>
+
+<main>
+
+<section class="summary">
+    <div class="stat">
+        <p>Total Devices</p>
+        <h2 id="total">0</h2>
+    </div>
+
+    <div class="stat">
+        <p>🟢 Active Devices</p>
+        <h2 id="online">0</h2>
+    </div>
+
+    <div class="stat">
+        <p>🔴 Inactive Devices</p>
+        <h2 id="offline">0</h2>
+    </div>
+</section>
+
+<div class="toolbar">
+    <h2>Device Management</h2>
+    <button onclick="loadDevices()">Refresh</button>
+</div>
+
+<div id="devices" class="devices"></div>
+
+</main>
+
+<script>
+async function loadDevices() {
+    const container = document.getElementById("devices");
+
+    try {
+        const response = await fetch("/api/overview");
+
+        if (!response.ok) {
+            throw new Error("Failed to load devices");
+        }
+
+        const devices = await response.json();
+
+        document.getElementById("total").textContent = devices.length;
+
+        document.getElementById("online").textContent =
+            devices.filter(d => d.isOnline).length;
+
+        document.getElementById("offline").textContent =
+            devices.filter(d => !d.isOnline).length;
+
+        container.innerHTML = "";
+
+        devices.forEach(device => {
+            const card = document.createElement("div");
+            card.className = "device";
+
+            const title = document.createElement("h3");
+            title.textContent = device.name;
+
+            const room = document.createElement("p");
+            room.textContent = "📍 Room: " + device.room;
+
+            const status = document.createElement("p");
+            status.className = device.isOnline ? "online" : "offline";
+            status.textContent = device.isOnline ? "● Online" : "● Offline";
+
+            const temperature = document.createElement("p");
+            temperature.textContent = "🌡️ Temperature: " +
+                (device.temperature ?? "N/A") + " °C";
+
+            const uptime = document.createElement("p");
+            uptime.textContent = "⏱️ Uptime: " +
+                device.uptimeSeconds + " seconds";
+
+            const button = document.createElement("button");
+            button.textContent = device.isOnline ? "Turn Off" : "Turn On";
+            button.onclick = () => toggleDevice(device.id);
+
+            card.append(
+                title, room, status, temperature, uptime, button
+            );
+
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        container.textContent = "Unable to load devices.";
+        console.error(error);
+    }
+}
+
+async function toggleDevice(id) {
+    try {
+        const response = await fetch("/api/toggle/" + id, {
+            method: "POST"
+        });
+
+        if (!response.ok) {
+            throw new Error("Device action failed");
+        }
+
+        await loadDevices();
+
+    } catch (error) {
+        alert("Could not change device status.");
+        console.error(error);
+    }
+}
+
+loadDevices();
+setInterval(loadDevices, 5000);
+</script>
+
+</body>
+</html>

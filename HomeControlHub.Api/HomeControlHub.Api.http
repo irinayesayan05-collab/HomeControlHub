@@ -1,0 +1,11 @@
+@HomeControlHub.Api_HostAddress = http://localhost:5250
+
+GET {{HomeControlHub.Api_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
+
+GET {{HomeControlHub.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
